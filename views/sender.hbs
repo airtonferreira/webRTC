@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>WebRTC Challenge - Send</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <script src="https://kit.fontawesome.com/a95e3fa0bd.js" crossorigin="anonymous"></script>
+</head>
+
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap');
+
+    body {
+        height: 100vh;
+        line-height: 1.5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 30px;
+        font-family: 'Noto Sans JP', sans-serif;
+    }
+
+    .container1 {
+        display: inline-flex;
+        justify-content: center;
+    }
+
+    .container2 {
+        width: 500px;
+        height: 500px;
+
+        display: flex;
+        flex-flow: row wrap;
+        align-items: flex-end;
+
+    }
+
+    .side-nav {
+        background-color: rgb(55, 64, 91);
+
+        width: 30%;
+        height: 502px;
+    }
+
+    .box-messages {
+        background-color: rgb(34, 42, 70);
+        border: none;
+
+        width: 100%;
+        height: 90%;
+
+        overflow: auto;
+    }
+
+    .box-message-input {
+        color: white;
+        background-color: rgb(55, 64, 91);
+        border-left: 1px solid rgb(34, 42, 70);
+        border-bottom: none;
+        border-top: none;
+        border-right: none;
+        outline: none;
+        padding-left: 20px;
+        padding-right: 50px;
+
+
+        width: 100%;
+        height: 10%;
+    }
+
+    #sendButton {
+        position: absolute;
+        margin-left: 410px;
+
+        border: none;
+        background-color: transparent;
+        width: 40px;
+        height: 50px;
+
+        cursor: pointer;
+    }
+
+    #sendButton i {
+        color: rgb(147, 174, 255);
+        font-size: 40px;
+    }
+
+    .sidebar {
+        background-color: rgb(55, 64, 91);
+        color: white;
+        font-size: 12px;
+    }
+
+    .sidebar dd {
+        margin-left: -35px;
+        padding-top: 10px;
+    }
+
+    .msg-time {
+        font-size: 10px;
+        color: rgb(154, 154, 154);
+    }
+
+    .message {
+        margin-top: 10px;
+    }
+
+    #clearMsgsButton {
+        outline: none;
+        color: gray;
+        float: right;
+        cursor: pointer;
+        border: none;
+        width: 100px;
+        height: 20px;
+
+        background-color: rgb(172, 172, 172, 0.2);
+    }
+
+
+    #connect-button {
+        outline: none;
+        color: white;
+        cursor: pointer;
+        border: none;
+        width: 100px;
+        height: 20px;
+        background-color: rgb(147, 174, 255);
+    }
+
+    #connect-button:hover {
+        background-color: rgb(102, 135, 232);
+        transition: 0.5s;
+    }
+
+    #receiver-id {
+        text-align: center;
+        color: white;
+        background-color: rgb(57, 72, 118);
+        border: none;
+        outline: none;
+        height: 20px;
+    }
+</style>
+
+<body>
+
+    <div class="container1">
+
+        <div class="side-nav">
+            <ul class="sidebar">
+                <dd><i class="fas fa-user"></i>&nbsp Sender</dd>
+                <dd>Status:<br>
+                    <span id="status" class="status"></span>
+                </dd>
+                <dd>ID do seu amigo:</dd>
+                <dd>
+                    <input type="text" id="receiver-id" placeholder="ID do Receiver">
+                </dd>
+                <dd>
+                    <button id="connect-button">Conectar</button>
+                </dd>
+            </ul>
+        </div>
+
+        <div class="container2">
+            <div class="box-messages">
+                <div class="message" id="message"></div>
+                <button id="clearMsgsButton">Limpar histórico</button>
+            </div>
+
+            <input class="box-message-input" type="text" id="sendMessageBox" placeholder="Enter a message..."
+                autofocus="true" />
+            <button title="Enviar" type="button" id="sendButton"><i class="fas fa-angle-right"></i></button>
+
+        </div>
+
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.2.0/dist/peerjs.min.js"></script>
+    <script type="text/javascript">
+        (function () {
+
+            var lastPeerId = null;
+            var peer = null; // own peer object
+            var conn = null;
+            var recvIdInput = document.getElementById("receiver-id");
+            var status = document.getElementById("status");
+            var message = document.getElementById("message");
+            var goButton = document.getElementById("goButton");
+            var resetButton = document.getElementById("resetButton");
+            var fadeButton = document.getElementById("fadeButton");
+            var offButton = document.getElementById("offButton");
+            var sendMessageBox = document.getElementById("sendMessageBox");
+            var sendButton = document.getElementById("sendButton");
+            var clearMsgsButton = document.getElementById("clearMsgsButton");
+            var connectButton = document.getElementById("connect-button");
+            var cueString = "<span class=\"cueMsg\">Cue: </span>";
+
+            /**
+             * Create the Peer object for our end of the connection.
+             *
+             * Sets up callbacks that handle any events related to our
+             * peer object.
+             */
+            function initialize() {
+                // Create own peer object with connection to shared PeerJS server
+                peer = new Peer(null, {
+                    debug: 2
+                });
+
+                peer.on('open', function (id) {
+                    // Workaround for peer.reconnect deleting previous id
+                    if (peer.id === null) {
+                        console.log('Received null id from peer open');
+                        peer.id = lastPeerId;
+                    } else {
+                        lastPeerId = peer.id;
+                    }
+
+                    console.log('ID: ' + peer.id);
+                });
+                peer.on('connection', function (c) {
+                    // Disallow incoming connections
+                    c.on('open', function () {
+                        c.send("Sender does not accept incoming connections");
+                        setTimeout(function () { c.close(); }, 500);
+                    });
+                });
+                peer.on('disconnected', function () {
+                    status.innerHTML = "Connection lost. Please reconnect";
+                    console.log('Connection lost. Please reconnect');
+
+                    // Workaround for peer.reconnect deleting previous id
+                    peer.id = lastPeerId;
+                    peer._lastServerId = lastPeerId;
+                    peer.reconnect();
+                });
+                peer.on('close', function () {
+                    conn = null;
+                    status.innerHTML = "Connection destroyed. Please refresh";
+                    console.log('Connection destroyed');
+                });
+                peer.on('error', function (err) {
+                    console.log(err);
+                    alert('' + err);
+                });
+            };
+
+            /**
+             * Create the connection between the two Peers.
+             *
+             * Sets up callbacks that handle any events related to the
+             * connection and data received on it.
+             */
+            function join() {
+                // Close old connection
+                if (conn) {
+                    conn.close();
+                }
+
+                // Create connection to destination peer specified in the input field
+                conn = peer.connect(recvIdInput.value, {
+                    reliable: true
+                });
+
+                conn.on('open', function () {
+                    status.innerHTML = "Connected to: " + conn.peer;
+                    console.log("Connected to: " + conn.peer);
+
+                    // Check URL params for comamnds that should be sent immediately
+                    var command = getUrlParam("command");
+                    if (command)
+                        conn.send(command);
+                });
+                // Handle incoming data (messages only since this is the signal sender)
+                conn.on('data', function (data) {
+                    addMessage(`<span style="background-color: rgb(55, 64, 91); color: white; font-size: 16px; width: auto; height: 30px; border-radius: 0px 25px 25px 25px; margin-top: 5px;">&nbsp&nbspPeer: &nbsp&nbsp${data}&nbsp&nbsp</span>`);
+                });
+                conn.on('close', function () {
+                    status.innerHTML = "Connection closed";
+                });
+            };
+
+            /**
+             * Get first "GET style" parameter from href.
+             * This enables delivering an initial command upon page load.
+             *
+             * Would have been easier to use location.hash.
+             */
+            function getUrlParam(name) {
+                name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+                var regexS = "[\\?&]" + name + "=([^&#]*)";
+                var regex = new RegExp(regexS);
+                var results = regex.exec(window.location.href);
+                if (results == null)
+                    return null;
+                else
+                    return results[1];
+            };
+
+            /**
+             * Send a signal via the peer connection and add it to the log.
+             * This will only occur if the connection is still alive.
+             */
+            function signal(sigName) {
+                if (conn && conn.open) {
+                    conn.send(sigName);
+                    console.log(sigName + " signal sent");
+                    addMessage(cueString + sigName);
+                } else {
+                    console.log('Connection is closed');
+                }
+            }
+
+            function addMessage(msg) {
+                var now = new Date();
+                var h = now.getHours();
+                var m = addZero(now.getMinutes());
+                var s = addZero(now.getSeconds());
+
+                if (h > 12)
+                    h -= 12;
+                else if (h === 0)
+                    h = 12;
+
+                function addZero(t) {
+                    if (t < 10)
+                        t = "0" + t;
+                    return t;
+                };
+
+                message.innerHTML = "<br><span class=\"msg-time\">" + h + ":" + m + ":" + s + "</span>  -  " + msg + message.innerHTML;
+            };
+
+            function clearMessages() {
+                message.innerHTML = "";
+                addMessage("Msgs cleared");
+            };
+
+            // Listen for enter in message box
+            sendMessageBox.addEventListener('keypress', function (e) {
+                var event = e || window.event;
+                var char = event.which || event.keyCode;
+                if (char == '13')
+                    sendButton.click();
+            });
+            // Send message
+            sendButton.addEventListener('click', function () {
+                if (conn && conn.open) {
+                    var msg = sendMessageBox.value;
+                    sendMessageBox.value = "";
+                    conn.send(msg);
+                    console.log("Sent: " + msg);
+                    addMessage(`<span style="background-color: rgb(147, 174, 255); color: white; font-size: 16px; width: auto; height: 30px; border-radius: 25px 25px 0px;">&nbsp&nbspVocê: &nbsp&nbsp${msg}&nbsp&nbsp</span>`);
+                } else {
+                    console.log('Connection is closed');
+                }
+            });
+
+            // Clear messages box
+            clearMsgsButton.addEventListener('click', clearMessages);
+            // Start peer connection on click
+            connectButton.addEventListener('click', join);
+
+            // Since all our callbacks are setup, start the process of obtaining an ID
+            initialize();
+        })();
+    </script>
+
+</body>
+
+</html>

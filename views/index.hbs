@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <title>WebRTC Challenge</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <script src="https://kit.fontawesome.com/a95e3fa0bd.js" crossorigin="anonymous"></script>
+</head>
+
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP&display=swap');
+
+    body {
+        height: 100vh;
+        line-height: 1.5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 30px;
+        font-family: 'Noto Sans JP', sans-serif;
+    }
+
+    button {
+        width: 100px;
+        height: 30px;
+
+        background-color: rgb(34, 42, 70);
+        cursor: pointer;
+        border: none;
+    }
+
+    button:hover {
+        background-color: rgb(62, 78, 138);
+        transition: 0.5s;
+    }
+
+    a {
+        color: white;
+        text-decoration: none;
+    }
+
+    .container {
+        background-color: rgb(228, 228, 228);
+        border-radius: 10px;
+        padding: 5rem;
+    }
+
+    #github {
+        color: rgb(62, 62, 62);
+        bottom-top: 1rem;
+    }
+</style>
+
+<body>
+    <div class="container">
+        <h1>WebRTC with Peer.JS</h1>
+        <h3>Simple Nest.JS application using WebRTC with Peer.Js for webchat app.</h3>
+
+        <div class="abas">
+
+            <button>
+                <a href="/receiver" target="_blank">Receive Page</a>
+            </button>
+
+            <button>
+                <a href="/sender" target="_blank">Sender Page</a>
+            </button>
+        </div>
+
+        <span id="github">
+            <i class="fab fa-github"></i>
+            <i>/airtonferreira</i>
+        </span>
+
+    </div>
+
+
+</body>
+
+</html>
